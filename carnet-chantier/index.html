@@ -304,6 +304,7 @@
         <div class="field">
           <label for="catInput">Catégorie</label>
           <select id="catInput"></select>
+          <input type="text" id="newCatInput" class="hidden" placeholder="Nom de la nouvelle catégorie" style="margin-top:8px;">
         </div>
       </div>
       <div class="field" id="supplierField">
@@ -378,10 +379,22 @@ const typeColor = name => (TYPES.find(t=>t.name===name)||TYPES[TYPES.length-1]).
 
 let expenses = [];
 let workers = [];
+let customCategories = [];
 let currentView = 'overview';
 let chart = null;
 
-const catColor = name => (CATS.find(c=>c.name===name)||CATS[CATS.length-1]).color;
+const AUTO_COLORS = ['#2a78d6','#eb6834','#1baf7a','#eda100','#e87ba4','#4a3aa7','#008300','#9085e9','#e34948','#199e70','#c98500','#d55181','#3987e5','#e66767','#8FA9BA','#7c3aed','#0891b2','#ca8a04','#dc2626','#16a34a'];
+function hashColor(name){
+  let h = 0;
+  for(let i=0;i<name.length;i++){ h = (h*31 + name.charCodeAt(i)) >>> 0; }
+  return AUTO_COLORS[h % AUTO_COLORS.length];
+}
+
+const catColor = name => {
+  const known = CATS.find(c=>c.name===name);
+  if(known) return known.color;
+  return hashColor(name);
+};
 const PANEL_HEX = '#17293C';
 
 function fmtEUR(n){
@@ -434,10 +447,39 @@ async function saveWorkers(){
   }catch(e){ console.error('Erreur de sauvegarde ouvriers', e); }
 }
 
+async function loadCategories(){
+  try{
+    const r = await fetch('/.netlify/functions/data?key=categories', { headers: authHeaders() });
+    if(r.status === 401) return false;
+    const val = await r.json();
+    customCategories = val || [];
+  }catch(e){ customCategories = []; }
+  return true;
+}
+
+async function saveCategories(){
+  try{
+    await fetch('/.netlify/functions/data?key=categories', {
+      method: 'POST',
+      headers: authHeaders({ 'Content-Type': 'application/json' }),
+      body: JSON.stringify(customCategories)
+    });
+  }catch(e){ console.error('Erreur de sauvegarde catégories', e); }
+}
+
 function populateWorkerSelect(){
   const sel = document.getElementById('workerInput');
   sel.innerHTML = workers.map(w=>`<option value="${escapeHtml(w)}">${escapeHtml(w)}</option>`).join('')
     + `<option value="__new__">+ Ajouter un nouvel ouvrier…</option>`;
+}
+
+function populateCatSelect(){
+  const sel = document.getElementById('catInput');
+  const previous = sel.value;
+  const allCats = CATS.map(c=>c.name).concat(customCategories);
+  sel.innerHTML = allCats.map(name=>`<option value="${escapeHtml(name)}">${escapeHtml(name)}</option>`).join('')
+    + `<option value="__newcat__">+ Ajouter une nouvelle catégorie…</option>`;
+  if(allCats.includes(previous)) sel.value = previous;
 }
 
 function toggleWorkerField(){
@@ -464,8 +506,12 @@ function toggleWorkerField(){
 }
 
 function initForm(){
-  const sel = document.getElementById('catInput');
-  sel.innerHTML = CATS.map(c=>`<option value="${c.name}">${c.name}</option>`).join('');
+  populateCatSelect();
+  document.getElementById('catInput').addEventListener('change', ()=>{
+    const v = document.getElementById('catInput').value;
+    document.getElementById('newCatInput').classList.toggle('hidden', v !== '__newcat__');
+    if(v === '__newcat__') document.getElementById('newCatInput').focus();
+  });
   const typeSel = document.getElementById('typeInput');
   typeSel.innerHTML = TYPES.map(t=>`<option value="${t.name}">${t.name}</option>`).join('');
   document.getElementById('dateStamp').textContent = new Date().toLocaleDateString('fr-BE',{day:'2-digit',month:'2-digit',year:'numeric'});
@@ -482,13 +528,28 @@ document.getElementById('addBtn').addEventListener('click', async ()=>{
   const desc = document.getElementById('descInput').value.trim();
   const amount = parseFloat(document.getElementById('amountInput').value);
   const date = new Date().toISOString().slice(0,10);
-  const cat = document.getElementById('catInput').value;
+  let cat = document.getElementById('catInput').value;
   const type = document.getElementById('typeInput').value;
   let supplier = document.getElementById('supplierInput').value.trim();
 
   if(!desc || isNaN(amount) || amount <= 0){
     alert('Merci de renseigner au minimum une description et un montant valide.');
     return;
+  }
+
+  if(cat === '__newcat__'){
+    const newCat = document.getElementById('newCatInput').value.trim();
+    if(!newCat){
+      alert('Merci de renseigner le nom de la nouvelle catégorie.');
+      return;
+    }
+    cat = newCat;
+    const allCats = CATS.map(c=>c.name).concat(customCategories);
+    if(!allCats.includes(cat)){
+      customCategories.push(cat);
+      await saveCategories();
+      populateCatSelect();
+    }
   }
 
   if(type === "Main d'œuvre"){
@@ -517,6 +578,9 @@ document.getElementById('addBtn').addEventListener('click', async ()=>{
   document.getElementById('amountInput').value = '';
   document.getElementById('supplierInput').value = '';
   document.getElementById('newWorkerInput').value = '';
+  document.getElementById('newCatInput').value = '';
+  document.getElementById('newCatInput').classList.add('hidden');
+  document.getElementById('catInput').value = cat;
   toggleWorkerField();
 
   render();
@@ -744,8 +808,9 @@ function renderChart(){
 async function tryUnlock(password){
   sessionStorage.setItem('carnetPassword', password);
   const okWorkers = await loadWorkers();
+  const okCategories = await loadCategories();
   const okData = await loadData();
-  if(okWorkers && okData){
+  if(okWorkers && okCategories && okData){
     document.getElementById('lockScreen').style.display = 'none';
     document.getElementById('appWrap').style.display = 'block';
     initForm();
