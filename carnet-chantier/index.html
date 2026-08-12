@@ -83,6 +83,33 @@
     box-shadow:0 0 0 3px rgba(232,97,31,0.12);
   }
 
+  .sync-pill{
+    display:inline-flex;align-items:center;gap:7px;
+    background:var(--bp-panel-2);border:1px solid var(--bp-line);border-radius:20px;
+    padding:6px 12px 6px 10px;font-family:'Inter',sans-serif;font-size:11px;font-weight:600;
+    letter-spacing:.5px;text-transform:uppercase;color:var(--bp-muted);
+    transition:border-color .2s ease, color .2s ease;
+  }
+  .sync-dot{
+    width:8px;height:8px;border-radius:50%;flex-shrink:0;background:var(--bp-green);
+    box-shadow:0 0 0 3px rgba(79,169,122,0.22);
+    transition:background .2s ease, box-shadow .2s ease;
+  }
+  .sync-pill[data-state="saving"] .sync-dot{
+    background:var(--bp-yellow);box-shadow:0 0 0 3px rgba(240,180,41,0.25);
+    animation:sync-pulse 0.9s ease-in-out infinite;
+  }
+  .sync-pill[data-state="error"] .sync-dot{
+    background:var(--bp-red);box-shadow:0 0 0 3px rgba(210,67,67,0.25);
+  }
+  .sync-pill[data-state="ok"]{color:var(--bp-green);}
+  .sync-pill[data-state="saving"]{color:var(--bp-yellow);}
+  .sync-pill[data-state="error"]{color:var(--bp-red);border-color:var(--bp-red);}
+  @keyframes sync-pulse{
+    0%,100%{opacity:1;}
+    50%{opacity:.35;}
+  }
+
   /* ---- cartes chiffrées : tôle rivetée ---- */
   .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:14px;margin-bottom:28px;}
   .card{
@@ -248,7 +275,13 @@
       </div>
       <div class="sub">Suivi des dépenses travaux</div>
     </div>
-    <div class="stamp" id="dateStamp"></div>
+    <div style="display:flex;flex-direction:column;align-items:flex-end;gap:8px;">
+      <div class="stamp" id="dateStamp"></div>
+      <div class="sync-pill" id="syncPill" data-state="ok">
+        <span class="sync-dot"></span>
+        <span id="syncLabel">Synchronisé</span>
+      </div>
+    </div>
   </div>
 
   <div class="cards">
@@ -405,66 +438,128 @@ function authHeaders(extra){
   return Object.assign({ 'x-carnet-password': sessionStorage.getItem('carnetPassword') || '' }, extra || {});
 }
 
+function showSyncError(msg){
+  let el = document.getElementById('syncError');
+  if(!el){
+    el = document.createElement('div');
+    el.id = 'syncError';
+    el.style.cssText = 'position:fixed;bottom:16px;left:50%;transform:translateX(-50%);background:var(--bp-red);color:#fff;padding:12px 18px;border-radius:6px;font-size:13px;z-index:9999;max-width:90%;text-align:center;box-shadow:0 4px 14px rgba(0,0,0,.4);';
+    document.body.appendChild(el);
+  }
+  el.textContent = msg;
+  el.style.display = 'block';
+  clearTimeout(el._t);
+  el._t = setTimeout(()=>{ el.style.display = 'none'; }, 6000);
+}
+
+function setSyncStatus(state){
+  const pill = document.getElementById('syncPill');
+  const label = document.getElementById('syncLabel');
+  if(!pill) return;
+  pill.dataset.state = state;
+  label.textContent = state === 'saving' ? 'Sauvegarde…' : state === 'error' ? 'Non sauvegardé' : 'Synchronisé';
+}
+
 async function loadData(){
   try{
     const r = await fetch('/.netlify/functions/data?key=expenses', { headers: authHeaders() });
     if(r.status === 401) return false;
+    if(!r.ok) throw new Error('HTTP ' + r.status);
     const val = await r.json();
     expenses = val || [];
-  }catch(e){ expenses = []; }
+    localStorage.setItem('carnet_backup_expenses', JSON.stringify(expenses));
+  }catch(e){
+    const backup = localStorage.getItem('carnet_backup_expenses');
+    expenses = backup ? JSON.parse(backup) : [];
+    setSyncStatus('error');
+    showSyncError('Impossible de charger les dépenses depuis le serveur — copie locale affichée. Vérifie ta connexion.');
+  }
   render();
   return true;
 }
 
 async function saveExpenses(){
+  localStorage.setItem('carnet_backup_expenses', JSON.stringify(expenses));
+  setSyncStatus('saving');
   try{
-    await fetch('/.netlify/functions/data?key=expenses', {
+    const r = await fetch('/.netlify/functions/data?key=expenses', {
       method: 'POST',
       headers: authHeaders({ 'Content-Type': 'application/json' }),
       body: JSON.stringify(expenses)
     });
-  }catch(e){ console.error('Erreur de sauvegarde', e); }
+    if(!r.ok) throw new Error('HTTP ' + r.status);
+    setSyncStatus('ok');
+  }catch(e){
+    setSyncStatus('error');
+    showSyncError('Échec de la sauvegarde en ligne ! Réessaie ou vérifie ta connexion — la donnée reste dans ce navigateur pour l\'instant.');
+  }
 }
 
 async function loadWorkers(){
   try{
     const r = await fetch('/.netlify/functions/data?key=workers', { headers: authHeaders() });
     if(r.status === 401) return false;
+    if(!r.ok) throw new Error('HTTP ' + r.status);
     const val = await r.json();
     workers = val || [];
-  }catch(e){ workers = []; }
+    localStorage.setItem('carnet_backup_workers', JSON.stringify(workers));
+  }catch(e){
+    const backup = localStorage.getItem('carnet_backup_workers');
+    workers = backup ? JSON.parse(backup) : [];
+    showSyncError('Impossible de charger les ouvriers depuis le serveur — copie locale affichée.');
+  }
   populateWorkerSelect();
   return true;
 }
 
 async function saveWorkers(){
+  localStorage.setItem('carnet_backup_workers', JSON.stringify(workers));
+  setSyncStatus('saving');
   try{
-    await fetch('/.netlify/functions/data?key=workers', {
+    const r = await fetch('/.netlify/functions/data?key=workers', {
       method: 'POST',
       headers: authHeaders({ 'Content-Type': 'application/json' }),
       body: JSON.stringify(workers)
     });
-  }catch(e){ console.error('Erreur de sauvegarde ouvriers', e); }
+    if(!r.ok) throw new Error('HTTP ' + r.status);
+    setSyncStatus('ok');
+  }catch(e){
+    setSyncStatus('error');
+    showSyncError('Échec de la sauvegarde des ouvriers en ligne !');
+  }
 }
 
 async function loadCategories(){
   try{
     const r = await fetch('/.netlify/functions/data?key=categories', { headers: authHeaders() });
     if(r.status === 401) return false;
+    if(!r.ok) throw new Error('HTTP ' + r.status);
     const val = await r.json();
     customCategories = val || [];
-  }catch(e){ customCategories = []; }
+    localStorage.setItem('carnet_backup_categories', JSON.stringify(customCategories));
+  }catch(e){
+    const backup = localStorage.getItem('carnet_backup_categories');
+    customCategories = backup ? JSON.parse(backup) : [];
+    showSyncError('Impossible de charger les catégories depuis le serveur — copie locale affichée.');
+  }
   return true;
 }
 
 async function saveCategories(){
+  localStorage.setItem('carnet_backup_categories', JSON.stringify(customCategories));
+  setSyncStatus('saving');
   try{
-    await fetch('/.netlify/functions/data?key=categories', {
+    const r = await fetch('/.netlify/functions/data?key=categories', {
       method: 'POST',
       headers: authHeaders({ 'Content-Type': 'application/json' }),
       body: JSON.stringify(customCategories)
     });
-  }catch(e){ console.error('Erreur de sauvegarde catégories', e); }
+    if(!r.ok) throw new Error('HTTP ' + r.status);
+    setSyncStatus('ok');
+  }catch(e){
+    setSyncStatus('error');
+    showSyncError('Échec de la sauvegarde des catégories en ligne !');
+  }
 }
 
 function populateWorkerSelect(){
