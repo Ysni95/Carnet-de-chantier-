@@ -292,15 +292,9 @@
         <label for="descInput">Description</label>
         <input type="text" id="descInput" placeholder="ex: Sac de ciment x20">
       </div>
-      <div class="row2">
-        <div class="field">
-          <label for="amountInput">Montant (€)</label>
-          <input type="number" id="amountInput" placeholder="0.00" min="0" step="0.01">
-        </div>
-        <div class="field">
-          <label for="dateInput">Date</label>
-          <input type="date" id="dateInput">
-        </div>
+      <div class="field">
+        <label for="amountInput">Montant (€)</label>
+        <input type="number" id="amountInput" placeholder="0.00" min="0" step="0.01">
       </div>
       <div class="row2">
         <div class="field">
@@ -337,7 +331,6 @@
         <button data-view="cat">Par catégorie</button>
         <button data-view="type">Matériel / main d'œuvre</button>
         <button data-view="worker">Par ouvrier</button>
-        <button data-view="month">Par mois</button>
       </div>
       <div class="chart-wrap">
         <canvas id="mainChart" role="img" aria-label="Graphique de répartition des dépenses de chantier">Répartition des dépenses par catégorie ou par mois.</canvas>
@@ -475,7 +468,6 @@ function initForm(){
   sel.innerHTML = CATS.map(c=>`<option value="${c.name}">${c.name}</option>`).join('');
   const typeSel = document.getElementById('typeInput');
   typeSel.innerHTML = TYPES.map(t=>`<option value="${t.name}">${t.name}</option>`).join('');
-  document.getElementById('dateInput').valueAsDate = new Date();
   document.getElementById('dateStamp').textContent = new Date().toLocaleDateString('fr-BE',{day:'2-digit',month:'2-digit',year:'numeric'});
   typeSel.addEventListener('change', toggleWorkerField);
   document.getElementById('workerInput').addEventListener('change', ()=>{
@@ -489,13 +481,13 @@ function initForm(){
 document.getElementById('addBtn').addEventListener('click', async ()=>{
   const desc = document.getElementById('descInput').value.trim();
   const amount = parseFloat(document.getElementById('amountInput').value);
-  const date = document.getElementById('dateInput').value;
+  const date = new Date().toISOString().slice(0,10);
   const cat = document.getElementById('catInput').value;
   const type = document.getElementById('typeInput').value;
   let supplier = document.getElementById('supplierInput').value.trim();
 
-  if(!desc || isNaN(amount) || amount <= 0 || !date){
-    alert('Merci de renseigner au minimum une description, un montant valide et une date.');
+  if(!desc || isNaN(amount) || amount <= 0){
+    alert('Merci de renseigner au minimum une description et un montant valide.');
     return;
   }
 
@@ -525,7 +517,6 @@ document.getElementById('addBtn').addEventListener('click', async ()=>{
   document.getElementById('amountInput').value = '';
   document.getElementById('supplierInput').value = '';
   document.getElementById('newWorkerInput').value = '';
-  document.getElementById('dateInput').valueAsDate = new Date();
   toggleWorkerField();
 
   render();
