@@ -219,7 +219,21 @@
 </style>
 </head>
 <body>
-<div class="wrap">
+
+<div id="lockScreen" style="min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px;">
+  <div style="background:var(--bp-panel);border:1px solid var(--bp-line);border-radius:8px;padding:32px 28px;max-width:340px;width:100%;text-align:center;">
+    <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="var(--bp-orange)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="margin-bottom:14px;">
+      <rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+    </svg>
+    <h1 style="font-family:'Oswald',sans-serif;font-size:20px;text-transform:uppercase;letter-spacing:1px;margin:0 0 6px;color:var(--bp-text);">Accès protégé</h1>
+    <p style="color:var(--bp-muted);font-size:13px;margin:0 0 18px;">Entre le code d'accès pour consulter le carnet de chantier.</p>
+    <input type="password" id="lockPassword" placeholder="Mot de passe" style="width:100%;background:var(--bp-panel-2);border:1px solid var(--bp-line);color:var(--bp-text);font-family:'Inter',sans-serif;font-size:14px;padding:10px 12px;border-radius:4px;margin-bottom:10px;">
+    <button id="lockSubmit" style="width:100%;background:var(--bp-orange);color:#1C1204;border:none;font-family:'Oswald',sans-serif;font-weight:600;font-size:14px;text-transform:uppercase;letter-spacing:1px;padding:12px;border-radius:4px;cursor:pointer;">Entrer</button>
+    <p id="lockError" style="color:var(--bp-red);font-size:12px;margin:12px 0 0;display:none;">Mot de passe incorrect.</p>
+  </div>
+</div>
+
+<div class="wrap" id="appWrap" style="display:none;">
 
   <div class="head">
     <div class="hazard"></div>
@@ -381,20 +395,26 @@ function fmtEUR(n){
   return new Intl.NumberFormat('fr-BE',{style:'currency',currency:'EUR'}).format(n);
 }
 
+function authHeaders(extra){
+  return Object.assign({ 'x-carnet-password': sessionStorage.getItem('carnetPassword') || '' }, extra || {});
+}
+
 async function loadData(){
   try{
-    const r = await fetch('/.netlify/functions/data?key=expenses');
+    const r = await fetch('/.netlify/functions/data?key=expenses', { headers: authHeaders() });
+    if(r.status === 401) return false;
     const val = await r.json();
     expenses = val || [];
   }catch(e){ expenses = []; }
   render();
+  return true;
 }
 
 async function saveExpenses(){
   try{
     await fetch('/.netlify/functions/data?key=expenses', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: authHeaders({ 'Content-Type': 'application/json' }),
       body: JSON.stringify(expenses)
     });
   }catch(e){ console.error('Erreur de sauvegarde', e); }
@@ -402,18 +422,20 @@ async function saveExpenses(){
 
 async function loadWorkers(){
   try{
-    const r = await fetch('/.netlify/functions/data?key=workers');
+    const r = await fetch('/.netlify/functions/data?key=workers', { headers: authHeaders() });
+    if(r.status === 401) return false;
     const val = await r.json();
     workers = val || [];
   }catch(e){ workers = []; }
   populateWorkerSelect();
+  return true;
 }
 
 async function saveWorkers(){
   try{
     await fetch('/.netlify/functions/data?key=workers', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: authHeaders({ 'Content-Type': 'application/json' }),
       body: JSON.stringify(workers)
     });
   }catch(e){ console.error('Erreur de sauvegarde ouvriers', e); }
@@ -728,9 +750,41 @@ function renderChart(){
   }
 }
 
-initForm();
-loadWorkers();
-loadData();
+async function tryUnlock(password){
+  sessionStorage.setItem('carnetPassword', password);
+  const okWorkers = await loadWorkers();
+  const okData = await loadData();
+  if(okWorkers && okData){
+    document.getElementById('lockScreen').style.display = 'none';
+    document.getElementById('appWrap').style.display = 'block';
+    initForm();
+    return true;
+  }
+  sessionStorage.removeItem('carnetPassword');
+  return false;
+}
+
+document.getElementById('lockSubmit').addEventListener('click', async ()=>{
+  const pwd = document.getElementById('lockPassword').value;
+  const errorEl = document.getElementById('lockError');
+  errorEl.style.display = 'none';
+  const ok = await tryUnlock(pwd);
+  if(!ok) errorEl.style.display = 'block';
+});
+document.getElementById('lockPassword').addEventListener('keydown', (e)=>{
+  if(e.key === 'Enter') document.getElementById('lockSubmit').click();
+});
+
+// Si le mot de passe est déjà mémorisé (même onglet/session), on tente une connexion automatique
+(async ()=>{
+  const saved = sessionStorage.getItem('carnetPassword');
+  if(saved){
+    const ok = await tryUnlock(saved);
+    if(!ok) document.getElementById('lockPassword').focus();
+  } else {
+    document.getElementById('lockPassword').focus();
+  }
+})();
 </script>
 </body>
 </html>
