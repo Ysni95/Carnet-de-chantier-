@@ -1,7 +1,7 @@
 const { getStore } = require('@netlify/blobs');
 
 // Clés autorisées, pour éviter que n'importe quel nom de clé soit utilisé
-const ALLOWED_KEYS = ['expenses', 'workers'];
+const ALLOWED_KEYS = ['expenses', 'workers', 'categories'];
 
 exports.handler = async (event) => {
   const expectedPassword = process.env.CARNET_PASSWORD;
