@@ -190,6 +190,35 @@
   .legend{display:flex;flex-wrap:wrap;gap:10px 16px;margin-top:14px;font-size:12px;color:var(--bp-muted);font-family:'JetBrains Mono',monospace;}
   .legend span.dot{display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:6px;vertical-align:-1px;}
 
+  /* ---- onglets de navigation principaux ---- */
+  .view-tabs{display:flex;gap:10px;margin-bottom:24px;}
+  .view-tabs button{
+    flex:1;background:var(--bp-panel);border:1px solid var(--bp-line);color:var(--bp-muted);
+    font-family:'Oswald',sans-serif;font-weight:600;font-size:13px;text-transform:uppercase;letter-spacing:1.5px;
+    padding:13px 18px;border-radius:6px;cursor:pointer;transition:all .15s ease;
+    display:flex;align-items:center;justify-content:center;gap:8px;
+  }
+  .view-tabs button.active{background:var(--bp-orange);border-color:var(--bp-orange);color:#1C1204;}
+  .view-tabs button:hover:not(.active){border-color:var(--bp-orange);color:var(--bp-text);}
+  @media(max-width:600px){.view-tabs button{font-size:11px;padding:11px 8px;letter-spacing:.5px;}}
+
+  /* ---- soldes par personne (onglet dettes) ---- */
+  .balances{display:flex;flex-direction:column;gap:10px;}
+  .balance-row{
+    display:flex;align-items:center;justify-content:space-between;gap:10px;
+    background:var(--bp-panel-2);border:1px solid var(--bp-line);border-radius:6px;padding:11px 14px;
+  }
+  .balance-row .who{font-family:'Inter',sans-serif;font-weight:600;font-size:13px;}
+  .balance-row .amt{font-family:'JetBrains Mono',monospace;font-weight:700;font-size:14px;}
+  .balance-row .amt.owe{color:var(--bp-red);}
+  .balance-row .amt.credit{color:var(--bp-green);}
+  .balance-row .amt.even{color:var(--bp-muted);}
+  .type-pill{
+    display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:10px;font-size:11px;font-weight:500;
+  }
+  .type-pill.dette{background:rgba(210,67,67,0.14);color:var(--bp-red);border:1px solid rgba(210,67,67,0.35);}
+  .type-pill.remboursement{background:rgba(79,169,122,0.14);color:var(--bp-green);border:1px solid rgba(79,169,122,0.35);}
+
   .list-section{background:var(--bp-panel);border:1px dashed var(--bp-line);border-radius:6px;padding:20px;}
   table{width:100%;border-collapse:collapse;font-size:13px;}
   thead th{
@@ -283,6 +312,19 @@
       </div>
     </div>
   </div>
+
+  <div class="view-tabs">
+    <button class="active" id="tabExpensesBtn" data-target="viewExpenses">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 2v4M16 2v4"/><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M3 10h18"/></svg>
+      Dépenses
+    </button>
+    <button id="tabDebtsBtn" data-target="viewDebts">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+      Dettes
+    </button>
+  </div>
+
+  <div id="viewExpenses">
 
   <div class="cards">
     <div class="card">
@@ -380,6 +422,94 @@
     </h2>
     <div id="tableWrap"></div>
   </div>
+
+  </div><!-- /viewExpenses -->
+
+  <div id="viewDebts" class="hidden">
+
+    <div class="cards">
+      <div class="card">
+        <div class="lbl-row">
+          <span class="lbl">Total dû</span>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+        </div>
+        <div class="val" id="debtTotalOwed" style="color:var(--bp-red);">0 €</div>
+      </div>
+      <div class="card">
+        <div class="lbl-row">
+          <span class="lbl">Personnes</span>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        </div>
+        <div class="val" id="debtPersonCount">0</div>
+      </div>
+      <div class="card">
+        <div class="lbl-row">
+          <span class="lbl">Total emprunté</span>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m19 9-7 7-7-7"/></svg>
+        </div>
+        <div class="val" id="debtTotalBorrowed" style="font-size:20px;color:var(--bp-yellow);">0 €</div>
+      </div>
+      <div class="card">
+        <div class="lbl-row">
+          <span class="lbl">Total remboursé</span>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m5 15 7-7 7 7"/></svg>
+        </div>
+        <div class="val" id="debtTotalRepaid" style="font-size:20px;color:var(--bp-green);">0 €</div>
+      </div>
+    </div>
+
+    <div class="grid2">
+      <div class="ticket">
+        <h2>
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
+          Nouveau mouvement
+        </h2>
+        <div class="field">
+          <label for="debtPersonInput">Personne</label>
+          <select id="debtPersonInput"></select>
+          <input type="text" id="newDebtPersonInput" class="hidden" placeholder="Nom de la personne" style="margin-top:8px;">
+        </div>
+        <div class="row2">
+          <div class="field">
+            <label for="debtTypeInput">Type</label>
+            <select id="debtTypeInput">
+              <option value="dette">Je dois (emprunt)</option>
+              <option value="remboursement">Remboursement</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="debtAmountInput">Montant (€)</label>
+            <input type="number" id="debtAmountInput" placeholder="0.00" min="0" step="0.01">
+          </div>
+        </div>
+        <div class="field">
+          <label for="debtDescInput">Description (optionnel)</label>
+          <input type="text" id="debtDescInput" placeholder="ex: Avance pour le carrelage">
+        </div>
+        <button class="add-btn" id="addDebtBtn">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
+          Ajouter le mouvement
+        </button>
+      </div>
+
+      <div class="charts">
+        <h2>
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+          Soldes par personne
+        </h2>
+        <div class="balances" id="balancesWrap"></div>
+      </div>
+    </div>
+
+    <div class="list-section">
+      <h2>
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 2v4M16 2v4"/><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M3 10h18"/></svg>
+        Historique des mouvements
+      </h2>
+      <div id="debtTableWrap"></div>
+    </div>
+
+  </div><!-- /viewDebts -->
 
 </div>
 
@@ -561,6 +691,210 @@ async function saveCategories(){
     showSyncError('Échec de la sauvegarde des catégories en ligne !');
   }
 }
+
+let debts = [];
+let debtPersons = [];
+
+async function loadDebts(){
+  try{
+    const r = await fetch('/.netlify/functions/data?key=debts', { headers: authHeaders() });
+    if(r.status === 401) return false;
+    if(!r.ok) throw new Error('HTTP ' + r.status);
+    const val = await r.json();
+    debts = val || [];
+    localStorage.setItem('carnet_backup_debts', JSON.stringify(debts));
+  }catch(e){
+    const backup = localStorage.getItem('carnet_backup_debts');
+    debts = backup ? JSON.parse(backup) : [];
+    showSyncError('Impossible de charger les dettes depuis le serveur — copie locale affichée.');
+  }
+  return true;
+}
+
+async function saveDebts(){
+  localStorage.setItem('carnet_backup_debts', JSON.stringify(debts));
+  setSyncStatus('saving');
+  try{
+    const r = await fetch('/.netlify/functions/data?key=debts', {
+      method: 'POST',
+      headers: authHeaders({ 'Content-Type': 'application/json' }),
+      body: JSON.stringify(debts)
+    });
+    if(!r.ok) throw new Error('HTTP ' + r.status);
+    setSyncStatus('ok');
+  }catch(e){
+    setSyncStatus('error');
+    showSyncError('Échec de la sauvegarde des dettes en ligne !');
+  }
+}
+
+async function loadDebtPersons(){
+  try{
+    const r = await fetch('/.netlify/functions/data?key=debtPersons', { headers: authHeaders() });
+    if(r.status === 401) return false;
+    if(!r.ok) throw new Error('HTTP ' + r.status);
+    const val = await r.json();
+    debtPersons = val || [];
+    localStorage.setItem('carnet_backup_debtPersons', JSON.stringify(debtPersons));
+  }catch(e){
+    const backup = localStorage.getItem('carnet_backup_debtPersons');
+    debtPersons = backup ? JSON.parse(backup) : [];
+    showSyncError('Impossible de charger les personnes depuis le serveur — copie locale affichée.');
+  }
+  populateDebtPersonSelect();
+  return true;
+}
+
+async function saveDebtPersons(){
+  localStorage.setItem('carnet_backup_debtPersons', JSON.stringify(debtPersons));
+  setSyncStatus('saving');
+  try{
+    const r = await fetch('/.netlify/functions/data?key=debtPersons', {
+      method: 'POST',
+      headers: authHeaders({ 'Content-Type': 'application/json' }),
+      body: JSON.stringify(debtPersons)
+    });
+    if(!r.ok) throw new Error('HTTP ' + r.status);
+    setSyncStatus('ok');
+  }catch(e){
+    setSyncStatus('error');
+    showSyncError('Échec de la sauvegarde des personnes en ligne !');
+  }
+}
+
+function populateDebtPersonSelect(){
+  const sel = document.getElementById('debtPersonInput');
+  const previous = sel.value;
+  sel.innerHTML = debtPersons.map(p=>`<option value="${escapeHtml(p)}">${escapeHtml(p)}</option>`).join('')
+    + `<option value="__new__">+ Ajouter une nouvelle personne…</option>`;
+  if(debtPersons.includes(previous)) sel.value = previous;
+  document.getElementById('newDebtPersonInput').classList.toggle('hidden', debtPersons.length !== 0);
+}
+
+document.getElementById('debtPersonInput').addEventListener('change', ()=>{
+  const v = document.getElementById('debtPersonInput').value;
+  document.getElementById('newDebtPersonInput').classList.toggle('hidden', v !== '__new__');
+  if(v === '__new__') document.getElementById('newDebtPersonInput').focus();
+});
+
+document.getElementById('addDebtBtn').addEventListener('click', async ()=>{
+  const personSel = document.getElementById('debtPersonInput').value;
+  const newPersonVal = document.getElementById('newDebtPersonInput').value.trim();
+  const person = (debtPersons.length === 0 || personSel === '__new__') ? newPersonVal : personSel;
+  const type = document.getElementById('debtTypeInput').value;
+  const amount = parseFloat(document.getElementById('debtAmountInput').value);
+  const desc = document.getElementById('debtDescInput').value.trim();
+  const date = new Date().toISOString().slice(0,10);
+
+  if(!person){
+    alert('Merci de renseigner le nom de la personne.');
+    return;
+  }
+  if(isNaN(amount) || amount <= 0){
+    alert('Merci de renseigner un montant valide.');
+    return;
+  }
+
+  if(!debtPersons.includes(person)){
+    debtPersons.push(person);
+    await saveDebtPersons();
+    populateDebtPersonSelect();
+  }
+
+  debts.push({
+    id: Date.now().toString(36) + Math.random().toString(36).slice(2,7),
+    person, type, amount, desc, date
+  });
+  await saveDebts();
+
+  document.getElementById('debtAmountInput').value = '';
+  document.getElementById('debtDescInput').value = '';
+  document.getElementById('newDebtPersonInput').value = '';
+  document.getElementById('debtPersonInput').value = person;
+  document.getElementById('newDebtPersonInput').classList.add('hidden');
+
+  renderDebts();
+});
+
+async function deleteDebt(id){
+  debts = debts.filter(d=>d.id!==id);
+  await saveDebts();
+  renderDebts();
+}
+
+function renderDebts(){
+  const borrowed = debts.filter(d=>d.type==='dette').reduce((s,d)=>s+d.amount,0);
+  const repaid = debts.filter(d=>d.type==='remboursement').reduce((s,d)=>s+d.amount,0);
+
+  const balances = {};
+  for(const d of debts){
+    balances[d.person] = (balances[d.person]||0) + (d.type==='dette' ? d.amount : -d.amount);
+  }
+  const totalOwed = Object.values(balances).filter(v=>v>0.004).reduce((a,b)=>a+b,0);
+
+  document.getElementById('debtTotalOwed').textContent = fmtEUR(totalOwed);
+  document.getElementById('debtPersonCount').textContent = Object.keys(balances).length;
+  document.getElementById('debtTotalBorrowed').textContent = fmtEUR(borrowed);
+  document.getElementById('debtTotalRepaid').textContent = fmtEUR(repaid);
+
+  const balWrap = document.getElementById('balancesWrap');
+  const people = Object.keys(balances).sort((a,b)=> balances[b]-balances[a]);
+  if(people.length === 0){
+    balWrap.innerHTML = '<span style="color:var(--bp-muted);font-size:13px;">Aucun mouvement enregistré pour le moment.</span>';
+  }else{
+    balWrap.innerHTML = people.map(p=>{
+      const bal = balances[p];
+      let cls = 'even', label = 'À jour';
+      if(bal > 0.004){ cls = 'owe'; label = 'Tu dois ' + fmtEUR(bal); }
+      else if(bal < -0.004){ cls = 'credit'; label = fmtEUR(Math.abs(bal)) + ' d\'avance'; }
+      return `<div class="balance-row"><span class="who">${escapeHtml(p)}</span><span class="amt ${cls}">${label}</span></div>`;
+    }).join('');
+  }
+
+  renderDebtTable();
+}
+
+function renderDebtTable(){
+  const wrap = document.getElementById('debtTableWrap');
+  if(debts.length === 0){
+    wrap.innerHTML = `<div class="empty">
+      <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M8 2v4M16 2v4"/><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M3 10h18"/></svg>
+      <span>Aucun mouvement enregistré pour le moment.<br>Ajoutez une dette ou un remboursement ci-dessus.</span>
+    </div>`;
+    return;
+  }
+  const sorted = [...debts].sort((a,b)=> b.date.localeCompare(a.date));
+  let html = '<table><thead><tr><th>Date</th><th>Personne</th><th>Type</th><th>Description</th><th style="text-align:right;">Montant</th><th></th></tr></thead><tbody>';
+  for(const d of sorted){
+    const typeLabel = d.type === 'dette' ? 'Dette' : 'Remboursement';
+    html += `<tr>
+      <td>${new Date(d.date).toLocaleDateString('fr-BE')}</td>
+      <td>${escapeHtml(d.person)}</td>
+      <td><span class="type-pill ${d.type}">${typeLabel}</span></td>
+      <td>${escapeHtml(d.desc||'—')}</td>
+      <td class="amount">${fmtEUR(d.amount)}</td>
+      <td><button class="del-btn" data-id="${d.id}" aria-label="Supprimer ce mouvement">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
+      </button></td>
+    </tr>`;
+  }
+  html += '</tbody></table>';
+  wrap.innerHTML = html;
+  wrap.querySelectorAll('.del-btn').forEach(b=>{
+    b.addEventListener('click', ()=> deleteDebt(b.dataset.id));
+  });
+}
+
+document.querySelectorAll('.view-tabs button').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    document.querySelectorAll('.view-tabs button').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    const target = btn.dataset.target;
+    document.getElementById('viewExpenses').classList.toggle('hidden', target !== 'viewExpenses');
+    document.getElementById('viewDebts').classList.toggle('hidden', target !== 'viewDebts');
+    if(target === 'viewDebts') renderDebts();
+  });
+});
 
 function populateWorkerSelect(){
   const sel = document.getElementById('workerInput');
@@ -905,10 +1239,13 @@ async function tryUnlock(password){
   const okWorkers = await loadWorkers();
   const okCategories = await loadCategories();
   const okData = await loadData();
-  if(okWorkers && okCategories && okData){
+  const okDebts = await loadDebts();
+  const okDebtPersons = await loadDebtPersons();
+  if(okWorkers && okCategories && okData && okDebts && okDebtPersons){
     document.getElementById('lockScreen').style.display = 'none';
     document.getElementById('appWrap').style.display = 'block';
     initForm();
+    renderDebts();
     return true;
   }
   sessionStorage.removeItem('carnetPassword');
