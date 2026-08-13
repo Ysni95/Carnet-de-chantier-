@@ -1,9 +1,10 @@
 const { getStore } = require('@netlify/blobs');
 
 // Clés autorisées, pour éviter que n'importe quel nom de clé soit utilisé
-const ALLOWED_KEYS = ['expenses', 'workers', 'categories'];
+const ALLOWED_KEYS = ['expenses', 'workers', 'categories', 'debts', 'debtPersons'];
 
 // Récupère le store Netlify Blobs, avec config manuelle en secours
+// si l'auto-configuration de l'environnement échoue (MissingBlobsEnvironmentError)
 function getCarnetStore() {
   const siteID = process.env.NETLIFY_SITE_ID;
   const token = process.env.NETLIFY_AUTH_TOKEN;
@@ -69,6 +70,7 @@ exports.handler = async (event) => {
   }
 
   if (event.httpMethod === 'POST') {
+    // event.body est déjà une chaîne JSON envoyée par la page (ex: "[{...}]")
     await store.set(key, event.body || '[]');
     return {
       statusCode: 200,
